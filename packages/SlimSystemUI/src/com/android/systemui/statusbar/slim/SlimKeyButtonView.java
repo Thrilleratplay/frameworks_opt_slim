@@ -30,6 +30,7 @@ import android.graphics.drawable.Drawable;
 import android.hardware.input.InputManager;
 import android.media.AudioManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemClock;
@@ -37,7 +38,6 @@ import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.TypedValue;
-import android.view.GestureDetector;
 import android.view.HapticFeedbackConstants;
 import android.view.InputDevice;
 import android.view.KeyCharacterMap;
@@ -46,6 +46,7 @@ import android.view.MotionEvent;
 import android.view.SoundEffectConstants;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewParent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.ImageView;
@@ -53,6 +54,7 @@ import android.widget.ImageView;
 import com.android.internal.statusbar.IStatusBarService;
 
 import com.android.systemui.R;
+import com.android.systemui.statusbar.phone.SlimNavigationBarView;
 import com.android.systemui.statusbar.policy.KeyButtonView;
 
 import java.util.ArrayList;
@@ -67,10 +69,9 @@ public class SlimKeyButtonView extends KeyButtonView {
 
     private int mContentDescriptionRes;
     private long mDownTime;
-    private int mCode;
-    String mClickAction;
-    String mLongpressAction;
-    String mDoubleTapAction;
+    String mClickAction = ActionConstants.ACTION_NULL;
+    String mLongpressAction = ActionConstants.ACTION_NULL;
+    String mDoubleTapAction = ActionConstants.ACTION_NULL;
     private int mTouchSlop;
     boolean mSupportsLongpress = false;
     boolean mIsLongpressed = false;
@@ -80,7 +81,8 @@ public class SlimKeyButtonView extends KeyButtonView {
     private boolean mGestureAborted;
     private SlimKeyButtonRipple mRipple;
     private LongClickCallback mCallback;
-    private GestureDetector mGestureDetector;
+
+    private final Handler mHandler = new Handler();
 
     private IStatusBarService mStatusBar;
 
@@ -96,7 +98,6 @@ public class SlimKeyButtonView extends KeyButtonView {
                     sendEvent(KeyEvent.ACTION_DOWN, KeyEvent.FLAG_LONG_PRESS);
                     sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_LONG_CLICKED);
                 }
-                performLongClick();
                 setHapticFeedbackEnabled(true);
             }
         }
@@ -120,8 +121,6 @@ public class SlimKeyButtonView extends KeyButtonView {
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.KeyButtonView,
                 defStyle, 0);
 
-        mCode = a.getInteger(R.styleable.KeyButtonView_keyCode, 0);
-
         mSupportsLongpress = a.getBoolean(R.styleable.KeyButtonView_keyRepeat, true);
 
         TypedValue value = new TypedValue();
@@ -138,19 +137,6 @@ public class SlimKeyButtonView extends KeyButtonView {
         mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         setBackground(mRipple = new SlimKeyButtonRipple(context, this));
-
-        mGestureDetector = new GestureDetector(
-                context, new GestureDetector.SimpleOnGestureListener() {
-            @Override
-            public boolean onDown(MotionEvent e) {
-                return true;
-            }
-
-            @Override
-            public boolean onDoubleTap(MotionEvent e) {
-                return true;
-            }
-        });
     }
 
     @Override
@@ -163,27 +149,11 @@ public class SlimKeyButtonView extends KeyButtonView {
     }
 
     @Override
-    public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
-        super.onInitializeAccessibilityNodeInfo(info);
-        if (mCode != 0) {
-            info.addAction(new AccessibilityNodeInfo.AccessibilityAction(ACTION_CLICK, null));
-            if (mSupportsLongpress || isLongClickable()) {
-                info.addAction(
-                        new AccessibilityNodeInfo.AccessibilityAction(ACTION_LONG_CLICK, null));
-            }
-        }
-    }
-
-    @Override
     protected void onWindowVisibilityChanged(int visibility) {
         super.onWindowVisibilityChanged(visibility);
         if (visibility != View.VISIBLE) {
             jumpDrawablesToCurrentState();
         }
-    }
-
-    public void setCode(int code) {
-        mCode = code;
     }
 
     public void setClickAction(String action) {
@@ -201,23 +171,6 @@ public class SlimKeyButtonView extends KeyButtonView {
 
     public void setDoubleTapAction(String action) {
         mDoubleTapAction = action;
-    }
-
-    @Override
-    public boolean performAccessibilityActionInternal(int action, Bundle arguments) {
-        if (action == ACTION_CLICK && mCode != 0) {
-            sendEvent(KeyEvent.ACTION_DOWN, 0, SystemClock.uptimeMillis());
-            sendEvent(KeyEvent.ACTION_UP, 0);
-            sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED);
-            playSoundEffect(SoundEffectConstants.CLICK);
-            return true;
-        } else if (action == ACTION_LONG_CLICK && mCode != 0) {
-            sendEvent(KeyEvent.ACTION_DOWN, KeyEvent.FLAG_LONG_PRESS);
-            sendEvent(KeyEvent.ACTION_UP, 0);
-            sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_LONG_CLICKED);
-            return true;
-        }
-        return super.performAccessibilityActionInternal(action, arguments);
     }
 
     public void setRippleColor(int color) {
@@ -244,9 +197,6 @@ public class SlimKeyButtonView extends KeyButtonView {
                     try {
                         mStatusBar.preloadRecentApps();
                     } catch (RemoteException e) {}
-                }
-                if (mCode != 0) {
-                    sendEvent(KeyEvent.ACTION_DOWN, 0, mDownTime);
                 }
                 if (mDoubleTapPending) {
                     mDoubleTapPending = false;
@@ -276,9 +226,6 @@ public class SlimKeyButtonView extends KeyButtonView {
                 // hack to fix ripple getting stuck. exitHardware() starts an animation,
                 // but sometimes does not finish it.
                 mRipple.exitSoftware();
-                if (mCode != 0) {
-                    sendEvent(KeyEvent.ACTION_UP, KeyEvent.FLAG_CANCELED);
-                }
                 removeCallbacks(mCheckLongPress);
                 break;
             case MotionEvent.ACTION_UP:
@@ -299,13 +246,6 @@ public class SlimKeyButtonView extends KeyButtonView {
                                     ViewConfiguration.getDoubleTapTimeout() - 100);
                         }
                     }
-                    if (mCode != 0) {
-                        if (doIt) {
-                            sendEvent(KeyEvent.ACTION_UP, 0);
-                        } else {
-                            sendEvent(KeyEvent.ACTION_UP, KeyEvent.FLAG_CANCELED);
-                        }
-                    }
                     if (doIt && !hasDoubleTapAction()) {
                         sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED);
                         performClick();
@@ -315,17 +255,31 @@ public class SlimKeyButtonView extends KeyButtonView {
                 break;
         }
 
+        mHandler.post(mNavButtonDimActivator);
+
         return true;
     }
 
+    private final Runnable mNavButtonDimActivator = new Runnable() {
+        @Override
+        public void run() {
+            ViewParent parent = getParent();
+            while (parent != null && !(parent instanceof SlimNavigationBarView)) {
+                parent = parent.getParent();
+            }
+            if (parent != null) {
+                ((SlimNavigationBarView) parent).onNavButtonTouched();
+            }
+        }
+    };
+
     private boolean hasDoubleTapAction() {
-        return mDoubleTapAction != null &&
-            mDoubleTapAction != ActionConstants.ACTION_NULL;
+        return !mDoubleTapAction.equals(ActionConstants.ACTION_NULL);
     }
 
     public void playSoundEffect(int soundConstant) {
         mAudioManager.playSoundEffect(soundConstant, ActivityManager.getCurrentUser());
-    };
+    }
 
     private OnClickListener mClickListener = new OnClickListener() {
         @Override
@@ -354,20 +308,6 @@ public class SlimKeyButtonView extends KeyButtonView {
             return true;
         }
     };
-
-    public void sendEvent(int action, int flags) {
-        sendEvent(action, flags, SystemClock.uptimeMillis());
-    }
-
-    void sendEvent(int action, int flags, long when) {
-        final int repeatCount = (flags & KeyEvent.FLAG_LONG_PRESS) != 0 ? 1 : 0;
-        final KeyEvent ev = new KeyEvent(mDownTime, when, action, mCode, repeatCount,
-                0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
-                flags | KeyEvent.FLAG_FROM_SYSTEM | KeyEvent.FLAG_VIRTUAL_HARD_KEY,
-                InputDevice.SOURCE_KEYBOARD);
-        InputManager.getInstance().injectInputEvent(ev,
-                InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
-    }
 
     public void abortCurrentGesture() {
         setPressed(false);

@@ -283,7 +283,25 @@
     <string name="advanced_reboot_hide_on_keyguard">Hide on lock screen</string>
     <string name="advanced_reboot_show_always">Show always</string>
 
+    <!-- Hardware keys and lights -->
+    <string name="hardware_keys_enable_title">Enable hardware keys</string>
+    <string name="hardware_keys_enable_summary">Enable/disable hardware keys</string>
+    <string name="hardware_keys_lights_enable_title">Hardware key lights settings</string>
+
+    <!-- Key backlight -->
+    <string name="settings_reset_button">Reset</string>
+    <string name="button_backlight_enabled">Illuminate buttons</string>
+    <string name="keyboard_backlight_enabled">Illuminate keyboard</string>
+    <string name="button_backlight_seekbar_title">Button brightness</string>
+    <string name="keyboard_backlight_seekbar_title">Keyboard brightness</string>
+    <string name="backlight_timeout_title">Illumination timeout</string>
+    <string name="backlight_timeout_unlimited">Don\'t turn off</string>
+    <string name="backlight_summary_disabled">Disabled</string>
+    <string name="backlight_summary_enabled_with_timeout">Enabled for <xliff:g id="timeout">%s</xliff:g></string>
+    <string name="backlight_summary_enabled">Enabled</string>
+
     <!-- Hardware keys -->
+    <string name="enable_hw_keys_title">Enable Hardware Buttons</string>
     <string name="button_keys_title">Hardware Buttons</string>
     <string name="keys_bindings_title">Key actions</string>
     <string name="keys_enable_custom_title">Enable custom actions</string>
@@ -385,6 +403,22 @@
     <string name="navbar_cat">Navigation bar</string>
     <string name="navbar_dimensions_reset_message">Reset all dimensions entries to default?</string>
     <string name="navbar_button_style_reset_message">Reset all style entries to default?</string>
+
+    <!-- SlimDim -->
+    <string name="dim_nav_buttons_category">SlimDim</string>
+    <string name="dim_nav_buttons_title">Dim buttons after inactivity</string>
+    <string name="dim_nav_buttons_summary">Dim navigation bar buttons after not interacting with navigation bar for a specified time</string>
+    <string name="dim_nav_buttons_timeout_title">Timeout before dimming</string>
+    <string name="dim_nav_buttons_timeout_summary">Time (in milliseconds) to wait before dimming buttons</string>
+    <string name="dim_nav_buttons_alpha_title">Dim alpha</string>
+    <string name="dim_nav_buttons_alpha_summary">Alpha value to dim buttons to</string>
+    <string name="dim_nav_buttons_animate_title">Dim animation</string>
+    <string name="dim_nav_buttons_animate_summary">Animate the alpha fade</string>
+    <string name="dim_nav_buttons_animate_duration_title">Animation duration</string>
+    <string name="dim_nav_buttons_animate_duration_summary">Duration (in milliseconds) of the alpha animation</string>
+    <string name="dim_nav_buttons_touch_anywhere_title">Listen for touches on entire screen</string>
+    <string name="dim_nav_buttons_touch_anywhere_summary_on">Touching anywhere on the screen will cause buttons to un-dim</string>
+    <string name="dim_nav_buttons_touch_anywhere_summary_off">Only touches on the navbar will cause buttons to un-dim</string>
 
     <!-- Navigation bar button style -->
     <string name="nav_bar_button_style">Button style</string>

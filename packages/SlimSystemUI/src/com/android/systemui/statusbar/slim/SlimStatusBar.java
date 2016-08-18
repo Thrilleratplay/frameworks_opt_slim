@@ -44,13 +44,24 @@ import com.android.systemui.statusbar.phone.PhoneStatusBarView;
 
 import org.slim.provider.SlimSettings;
 
+import static com.android.systemui.statusbar.phone.BarTransitions.MODE_LIGHTS_OUT;
+import static com.android.systemui.statusbar.phone.BarTransitions.MODE_LIGHTS_OUT_TRANSPARENT;
+import static com.android.systemui.statusbar.phone.BarTransitions.MODE_OPAQUE;
+import static com.android.systemui.statusbar.phone.BarTransitions.MODE_SEMI_TRANSPARENT;
+import static com.android.systemui.statusbar.phone.BarTransitions.MODE_TRANSLUCENT;
+import static com.android.systemui.statusbar.phone.BarTransitions.MODE_TRANSPARENT;
+import static com.android.systemui.statusbar.phone.BarTransitions.MODE_WARNING;
+
 public class SlimStatusBar extends PhoneStatusBar {
 
     private static final String TAG = SlimStatusBar.class.getSimpleName();
 
+    private PhoneStatusBarView mStatusBarView;
     private SlimNavigationBarView mSlimNavigationBarView;
     private RecentController mSlimRecents;
     private Display mDisplay;
+
+    private SlimStatusBarIconController mSlimIconController;
 
     private boolean mHasNavigationBar = false;
     private boolean mNavigationBarAttached = false;
@@ -96,6 +107,24 @@ public class SlimStatusBar extends PhoneStatusBar {
             resolver.registerContentObserver(SlimSettings.System.getUriFor(
                     SlimSettings.System.MENU_VISIBILITY),
                     false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS),
+                    false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS_TIMEOUT),
+                    false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS_ALPHA),
+                    false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS_ANIMATE),
+                    false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS_ANIMATE_DURATION),
+                    false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS_TOUCH_ANYWHERE),
+                    false, this, UserHandle.USER_ALL);
         }
 
         @Override
@@ -130,6 +159,22 @@ public class SlimStatusBar extends PhoneStatusBar {
                     SlimSettings.System.NAVIGATION_BAR_CAN_MOVE))) {
                 prepareNavigationBarView();
             } else if (uri.equals(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS))
+                || uri.equals(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS_TIMEOUT))
+                || uri.equals(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS_ALPHA))
+                || uri.equals(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS_ANIMATE))
+                || uri.equals(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS_ANIMATE_DURATION))
+                || uri.equals(SlimSettings.System.getUriFor(
+                    SlimSettings.System.DIM_NAV_BUTTONS_TOUCH_ANYWHERE))) {
+                if (mSlimNavigationBarView != null) {
+                    mSlimNavigationBarView.updateNavigationBarSettings();
+                    mSlimNavigationBarView.onNavButtonTouched();
+                }
+            } else if (uri.equals(SlimSettings.System.getUriFor(
                     SlimSettings.System.NAVIGATION_BAR_SHOW))) {
                 updateNavigationBarVisibility();
             }
@@ -153,7 +198,7 @@ public class SlimStatusBar extends PhoneStatusBar {
 
     @Override
     protected PhoneStatusBarView makeStatusBarView() {
-        PhoneStatusBarView statusBarView = super.makeStatusBarView();
+        mStatusBarView = super.makeStatusBarView();
 
         if (mSlimNavigationBarView == null) {
             mSlimNavigationBarView = (SlimNavigationBarView)
@@ -191,13 +236,15 @@ public class SlimStatusBar extends PhoneStatusBar {
             mNavigationBarView = mSlimNavigationBarView;
         }
 
-        SlimBatteryContainer container =(SlimBatteryContainer) statusBarView.findViewById(
+        SlimBatteryContainer container =(SlimBatteryContainer) mStatusBarView.findViewById(
                 R.id.slim_battery_container);
         if (mBatteryController != null) {
             container.setBatteryController(mBatteryController);
         }
 
-        return statusBarView;
+        mSlimIconController = new SlimStatusBarIconController(mContext, mStatusBarView, this);
+
+        return mStatusBarView;
     }
 
     private void updateNavigationBarVisibility() {
@@ -281,6 +328,34 @@ public class SlimStatusBar extends PhoneStatusBar {
         lp.setTitle("NavigationBar");
         lp.windowAnimations = 0;
         return lp;
+    }
+
+    @Override
+    public void setSystemUiVisibility(int vis, int mask) {
+        final int oldVal = mSystemUiVisibility;
+        final int newVal = (oldVal&~mask | vis&mask);
+        final int diff = newVal ^ oldVal;
+
+        if (diff != 0) {
+            final int sbMode = computeBarMode(oldVal, newVal, mStatusBarView.getBarTransitions(),
+                    View.STATUS_BAR_TRANSIENT, View.STATUS_BAR_TRANSLUCENT);
+            final boolean sbModeChanged = sbMode != -1;
+            if ((diff & View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR) != 0 || sbModeChanged) {
+                boolean isTransparentBar = (mStatusBarMode == MODE_TRANSPARENT
+                        || sbMode == MODE_LIGHTS_OUT_TRANSPARENT);
+                boolean allowLight = isTransparentBar;
+                boolean light = (vis & View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR) != 0;
+                boolean animate = true;/*mFingerprintUnlockController == null
+                        || (mFingerprintUnlockController.getMode()
+                                != FingerprintUnlockController.MODE_WAKE_AND_UNLOCK_PULSING
+                        && mFingerprintUnlockController.getMode()
+                                != FingerprintUnlockController.MODE_WAKE_AND_UNLOCK);*/
+
+                mSlimIconController.setIconsDark(allowLight && light, animate);
+            }
+        }
+
+        super.setSystemUiVisibility(vis, mask);
     }
 
     private long mLastLockToAppLongPress;
