@@ -22,4 +22,7 @@
     <!-- Kill app permission -->
     <uses-permission android:name="android.permission.FORCE_STOP_PACKAGES" />
 
+    <uses-permission android:name="android.permission.CONTROL_KEYGUARD" />
+    <uses-permission android:name="com.cyanogenmod.lockclock.permission.READ_WEATHER" />
+
 </manifest>
