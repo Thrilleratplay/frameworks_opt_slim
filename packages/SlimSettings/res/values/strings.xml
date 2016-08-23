@@ -363,6 +363,11 @@
     <string name="status_bar_battery_percentage_text_inside">Inside the icon</string>
     <string name="status_bar_battery_percentage_text_next">Next to the icon</string>
 
+    <!-- Statusbar Clock options -->
+    <string name="default_string">Default</string>
+    <string name="reset">Reset</string>
+    <string name="cancel">Cancel</string>
+
     <!-- Navigation bar -->
     <string name="navigation_bar">Navigation bar</string>
     <string name="navigation_settings_category">Navigation</string>
@@ -403,6 +408,16 @@
     <string name="navbar_cat">Navigation bar</string>
     <string name="navbar_dimensions_reset_message">Reset all dimensions entries to default?</string>
     <string name="navbar_button_style_reset_message">Reset all style entries to default?</string>
+
+    <!-- Color Picker -->
+    <string name="dialog_color_picker">Color Picker</string>
+    <string name="press_color_to_apply">Press on color below to apply</string>
+    <string name="arrow_right" translatable="false">→</string>
+    <string name="arrow_down" translatable="false">↓</string>
+    <string name="hex">Hex:</string>
+    <string name="hex_hint" translatable="false">#ff000000</string>
+    <string name="set">Set</string>
+    <string name="color_default">Default</string>
 
     <!-- SlimDim -->
     <string name="dim_nav_buttons_category">SlimDim</string>

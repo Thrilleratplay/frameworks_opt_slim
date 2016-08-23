@@ -31,7 +31,7 @@
 
     <PreferenceScreen
         android:key="weather"
-        android:fragment="com.android.settings.tipsy.Weather"
+        android:fragment="com.android.settings.slim.fragments.Weather"
         android:title="@string/weather_category" />
 
     <PreferenceScreen
